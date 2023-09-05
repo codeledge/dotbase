@@ -1,5 +1,5 @@
-import { ClientNode, Node } from "./Node";
-import { ClientRel, Rel } from "./Rel";
+import { Node } from "./Node";
+import { Rel } from "./Rel";
 
 export enum IteratorResult {
   CONTINUE,
@@ -7,51 +7,88 @@ export enum IteratorResult {
 }
 
 export class GraphBase<DN = any, DR = any> {
-  nodes: Record<Node["id"], Node> = {};
-  rels: Record<Rel["id"], Rel> = {};
+  nodes = new Map<Node["id"], Node>();
+  rels = new Map<Rel["id"], Rel>();
 
   addNode<N = DN>(data?: N) {
     // @ts-ignore
     const id = data?.["id"];
-    if (id && this.nodes[id]) {
-      return this.nodes[id] as Node<N>;
+    if (id && this.nodes.has(id)) {
+      return this.nodes.get(id) as Node<N>;
     }
     const node = new Node<N>(data);
-    this.nodes[node.id] = node;
+    this.nodes.set(node.id, node);
     return node;
-  }
-
-  hasNode(id: Node["id"]): boolean {
-    return !!this.nodes[id];
   }
 
   linkNodes<F = DN, T = DN, R = DR>(
     from: Node<F>,
     to: Node<T>,
-    { data, skipDuplicates }: { data?: R; skipDuplicates?: boolean } = {}
+    { data }: { data?: R } = {}
   ) {
-    if (skipDuplicates && from.out.find(({ to: toNode }) => toNode === to))
-      return;
     const rel = new Rel(from, to, { data });
-    this.rels[rel.id] = rel;
-    from.out.push({
-      to,
-      rel,
+    this.rels.set(rel.id, rel);
+    from.out.push(rel);
+    to.in.push(rel);
+  }
+
+  hasNode(id: Node["id"]): boolean {
+    return this.nodes.has(id);
+  }
+
+  getRel<R = DR>(id: Rel<R>["id"]): Rel<R> | undefined {
+    return this.rels.get(id);
+  }
+
+  getRels(): Rel[] {
+    return Array.from(this.rels.values());
+  }
+
+  getNode<N = DN>(id: Node["id"]): Node<N> | undefined {
+    return this.nodes.get(id);
+  }
+
+  getNodes<N = DN>(): Node<N>[] {
+    return Array.from<Node<N>>(this.nodes.values());
+  }
+
+  getRoots<N = DN>() {
+    return this.getNodes<N>().filter((node) => {
+      return node.in.length === 0;
     });
-    to.in.push({
-      from,
-      rel,
+  }
+
+  getLeaves<N = DN>() {
+    return this.getNodes<N>().filter((node) => {
+      return node.out.length === 0;
     });
+  }
+
+  getPaths(startNode?: Node, endNode?: Node | ((n: Node) => boolean)) {
+    let paths: Rel[][] = [];
+
+    if (!startNode) return paths; // TODO: return all paths
+
+    this.walk(startNode, (currentNode, currentPath) => {
+      // console.log("currentNode", currentNode);
+      if (endNode instanceof Node && currentNode === endNode) {
+        paths.push(currentPath);
+        return IteratorResult.CONTINUE;
+      } else if (typeof endNode === "function" && endNode(currentNode)) {
+        paths.push(currentPath);
+        return IteratorResult.CONTINUE;
+      }
+    });
+    return paths;
   }
 
   walk(
     node: Node,
-    iterator?: (node: Node, currentPath: Rel["id"][]) => IteratorResult | void
+    iterator?: (node: Node, currentPath: Rel[]) => IteratorResult | void
   ) {
-    let visited: Set<Node["id"]> = new Set();
     let isWalkingStopped = false;
 
-    const walkRecursive = (currentNode: Node, currentPath: Rel["id"][]) => {
+    const walkRecursive = (currentNode: Node, currentPath: Rel[]) => {
       // console.log("isWalkingStopped", isWalkingStopped);
       if (isWalkingStopped) return;
 
@@ -66,122 +103,18 @@ export class GraphBase<DN = any, DR = any> {
         return;
       }
 
-      if (visited.has(currentNode.id)) {
-        // console.log("visited", currentNode.id);
-        return;
-      }
-      visited.add(currentNode.id);
+      if (
+        currentPath.some((rel) => {
+          rel.to === currentNode;
+        })
+      )
+        return IteratorResult.CONTINUE;
 
-      currentNode.out.forEach((link) => {
-        walkRecursive(link.to, currentPath.concat(link.rel.id));
+      currentNode.out.forEach((rel) => {
+        walkRecursive(rel.to, currentPath.concat(rel));
       });
     };
 
     walkRecursive(node, []);
   }
-
-  getRels(): ClientRel[] {
-    return Object.values(this.rels).map((rel) => this.formatClientRel(rel));
-  }
-
-  getPaths(startNode: Node, endNode: Node | ((n: Node) => boolean)) {
-    let paths: Rel["id"][][] = [];
-    this.walk(startNode, (currentNode, currentPath) => {
-      // console.log("currentNode", currentNode);
-      if (endNode instanceof Node && currentNode === endNode) {
-        paths.push(currentPath);
-        return IteratorResult.CONTINUE;
-      } else if (typeof endNode === "function" && endNode(currentNode)) {
-        paths.push(currentPath);
-        return IteratorResult.CONTINUE;
-      }
-    });
-    return paths;
-  }
-
-  formatClientRel(
-    rel: Rel,
-    { showFrom, showTo }: formatClientRelOptions = {}
-  ): ClientRel {
-    return {
-      id: rel.id,
-      data: rel.data,
-      ...(showFrom && {
-        from: this.formatClientNode(rel.from),
-      }),
-      ...(showTo && {
-        to: this.formatClientNode(rel.to),
-      }),
-    };
-  }
-
-  formatClientNode(
-    node: Node,
-    {
-      showOutLinks,
-      showInLinks,
-      showOutCount,
-      showInCount,
-    }: formatClientNodeOptions = {}
-  ): ClientNode {
-    return {
-      id: node.id,
-      data: node.data,
-      ...(showOutCount && {
-        outCount: node.out.length,
-      }),
-      ...(showInCount && {
-        inCount: node.in.length,
-      }),
-      ...(showOutLinks && {
-        out: node.out.map(({ to, rel }) => ({
-          to: this.formatClientNode(to),
-          rel: this.formatClientRel(rel),
-        })),
-      }),
-      ...(showInLinks && {
-        in: node.in.map(({ from, rel }) => ({
-          from: this.formatClientNode(from),
-          rel: this.formatClientRel(rel),
-        })),
-      }),
-    };
-  }
-
-  logNode(id: Node["id"], options?: formatClientNodeOptions): void {
-    if (this.nodes[id])
-      console.dir(this.formatClientNode(this.nodes[id], options), {
-        depth: null,
-      });
-  }
-
-  getRel<R = DR>(id: Rel<R>["id"], options?: formatClientRelOptions) {
-    const rel = this.rels[id];
-    if (rel) return this.formatClientRel(rel, options);
-  }
-
-  getNodes(): ClientNode[] {
-    return Object.values(this.nodes).map(({ id, data }) => ({
-      id,
-      data,
-    }));
-  }
-
-  getRoots() {
-    return Object.values(this.nodes).filter((node) => {
-      return node.out.length === 0;
-    });
-  }
 }
-
-type formatClientNodeOptions = {
-  showOutLinks?: boolean;
-  showInLinks?: boolean;
-  showOutCount?: boolean;
-  showInCount?: boolean;
-};
-
-type formatClientRelOptions = {
-  showFrom?: boolean;
-  showTo?: boolean;
-};

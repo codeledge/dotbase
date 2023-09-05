@@ -1,16 +1,16 @@
-import { Entity } from "./Entity";
 import { Node } from "./Node";
+import { getId, getIdFromData } from "./_internals/getId";
 
-export type ClientRel<R = any> = Pick<Rel<R>, "id" | "data">;
-
-export class Rel<R = any> extends Entity {
-  declare data: R;
+export class Rel<R = any> {
+  id: number | string;
+  data?: R;
   from: Node;
   to: Node;
 
   constructor(from: Node, to: Node, options: { data?: R } = {}) {
-    super(options.data);
+    this.id = getIdFromData(options.data) || getId();
     this.from = from;
     this.to = to;
+    this.data = options.data;
   }
 }

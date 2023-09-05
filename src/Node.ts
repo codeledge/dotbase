@@ -1,14 +1,14 @@
-import { Entity } from "./Entity";
-import { InLink, OutLink } from "./Link";
+import { Rel } from "./Rel";
+import { getId, getIdFromData } from "./_internals/getId";
 
-export type ClientNode = Pick<Node, "id" | "data">;
+export class Node<N = any> {
+  id: number | string;
+  data: N | undefined;
+  out: Rel[] = [];
+  in: Rel[] = [];
 
-export class Node<N = any> extends Entity {
-  declare data: N;
-  out: OutLink[] = [];
-  in: InLink[] = [];
-
-  constructor(nodeData?: N) {
-    super(nodeData);
+  constructor(data?: N) {
+    this.id = getIdFromData(data) || getId();
+    this.data = data;
   }
 }
