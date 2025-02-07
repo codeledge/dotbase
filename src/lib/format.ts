@@ -22,7 +22,8 @@ export type NodeSelect =
       in: boolean | RelSelect;
       out: boolean | RelSelect;
     }>
-  | boolean;
+  | boolean
+  | "COMPACT";
 
 export type RelSelect =
   | Partial<{
@@ -42,6 +43,9 @@ export type DotTypeSelect =
 
 export const formatNode = (node: Dot, options?: NodeSelect): any => {
   if (isBoolean(options)) return options ? node : undefined;
+  if (options === "COMPACT")
+    return `${node.id} ${node.types.map((t) => `[${t.name}]`).join("")}`;
+
   return {
     ...(options?.preview && { preview: options.preview(node) }),
     ...(options?.id && { id: node.id }),
@@ -54,7 +58,9 @@ export const formatNode = (node: Dot, options?: NodeSelect): any => {
     ...(options?.in && {
       in: node.in.map<any>((rel) => formatRel(rel, options?.in)),
     }),
-    ...(options?.out && { out: node.out.map((rel) => rel.to.id) }),
+    ...(options?.out && {
+      out: node.out.map<any>((rel) => formatRel(rel, options?.out)),
+    }),
   };
 };
 

@@ -1,6 +1,6 @@
 import { DotType } from "./types/DotType";
 import { DotTypeRel } from "./types/DotTypeRel";
-import { Dot, DotCreate, isDot } from "./types/Dot";
+import { Dot, DotCreate, DotUpdate, isDot } from "./types/Dot";
 import { DotRel, DotRelCreate } from "./types/DotRel";
 import { isArray, isFunction, isString } from "deverything";
 
@@ -10,32 +10,83 @@ export enum IteratorResult {
 }
 
 export class GraphBase<DN = any, DR = any> {
-  dotTypes = new Map<DotType["id"], DotType>();
+  dotTypes = new Map<DotType["name"], DotType>();
   dotTypeRels = new Map<DotTypeRel["id"], DotTypeRel>();
-  nodes = new Map<Dot["id"], Dot>();
+  dots = new Map<Dot["id"], Dot>();
   rels = new Map<DotRel["id"], DotRel>();
 
-  getOrCreateDot<N = DN>(dotCreate: DotCreate<N> = {}) {
-    if (dotCreate.id && this.nodes.has(dotCreate.id)) {
-      return this.nodes.get(dotCreate.id) as Dot<N>;
-    }
-    const node = new Dot<N>(dotCreate);
-    this.nodes.set(node.id, node);
+  createDot<N = DN>({
+    id,
+    data,
+    typeNames = [],
+  }: DotCreate<N> = {}): Dot<N> {
+    if (id && this.dots.has(id))
+      throw new Error(`Dot with id ${id} already exists`);
+
+    const types = this.getOrCreateDotTypes(typeNames);
+
+    const node = new Dot<N>({
+      id,
+      data,
+      types,
+    });
+    this.dots.set(node.id, node);
     return node;
   }
 
-  connectOrCreateTo<N = DN, R = DR>(
-    currentDot: Dot<N>,
-    dotRelCreate: DotRelCreate<R> = {},
-    dotCreate: DotCreate<N> = {}
-  ) {
-    const toDot = this.getOrCreateDot<N>(dotCreate);
+  getOrCreateDot<N = DN>(dotCreate: DotCreate<N> = {}) {
+    if (dotCreate.id && this.dots.has(dotCreate.id)) {
+      return this.getDot<N>({ id: dotCreate.id });
+    }
+    return this.createDot<N>(dotCreate);
+  }
 
-    const dotRel = this.connectDots(currentDot, toDot, dotRelCreate);
+  updateDot<N = DN>(dotId: Dot["id"], dotUpdate: DotUpdate<N> = {}) {
+    if (!this.dots.has(dotId)) {
+      throw new Error(`Dot with id ${dotId} does not exist`);
+    }
+
+    const dot = this.getDot<N>({ id: dotId });
+
+    dot.data = dotUpdate.data || dot.data;
+    dot.types = dotUpdate.typeNames
+      ? this.getOrCreateDotTypes(dotUpdate.typeNames)
+      : dot.types;
+
+    return dot;
+  }
+
+  mergeDot<N = DN>(dotCreate: DotCreate<N> = {}): Dot<N> {
+    if (dotCreate.id && this.hasDot(dotCreate.id)) {
+      const existing = this.getDot<N>({ id: dotCreate.id });
+      const merged = {
+        ...existing,
+        ...dotCreate, // very primitive merge
+      };
+      // if (merged.types.length === 2) console.log("merged", merged.id);
+      this.dots.set(existing.id, merged);
+      return this.getDot<N>({ id: dotCreate.id });
+    }
+
+    const node = new Dot<N>(dotCreate);
+    this.dots.set(node.id, node);
+    return node;
+  }
+
+  mergePattern<F = DN, R = DR, T = DN>(
+    fromDotCreate: Dot<F> | DotCreate<F>,
+    dotRelCreate: DotRelCreate<R>,
+    toDotCreate: Dot<T> | DotCreate<T>
+  ) {
+    const fromDot = this.getOrCreateDot<F>(fromDotCreate);
+    const toDot = this.getOrCreateDot<T>(toDotCreate);
+
+    const dotRel = this.connectDots(fromDot, toDot, dotRelCreate);
 
     return {
-      toDot,
+      fromDot,
       dotRel,
+      toDot,
     };
   }
 
@@ -46,21 +97,24 @@ export class GraphBase<DN = any, DR = any> {
   }: Partial<Dot> & { type?: string }): Dot<N> | undefined {
     const _types = types || [];
     if (type) _types.push(this.findDotType(type)!);
-    return this.getNodes<N>().find((dot) => {
+    return this.getDots<N>().find((dot) => {
       return dot.id === id || dot.types.some((type) => _types?.includes(type));
     });
   }
 
-  findDots<N = DN>({
-    id,
-    types,
-    type,
-  }: Partial<Dot> & { type?: string | DotType }): Dot<N>[] {
-    const _types = types || [];
-    if (type) _types.push(isString(type) ? this.findDotType(type)! : type);
-    return this.getNodes<N>().filter((dot) => {
+  findDots<N = DN>(
+    filter: (Partial<Dot> & { type?: string | DotType }) | ((d: Dot) => boolean)
+  ): Dot<N>[] {
+    if (isFunction(filter)) return this.getDots<N>().filter(filter);
+
+    const _types = filter.types || [];
+    if (filter.type)
+      _types.push(
+        isString(filter.type) ? this.findDotType(filter.type)! : filter.type
+      );
+    return this.getDots<N>().filter((dot) => {
       return (
-        (id ? dot.id === id : true) &&
+        (filter.id ? dot.id === filter.id : true) &&
         (_types.length ? dot.types.some((type) => _types.includes(type)) : true)
       );
     });
@@ -85,18 +139,27 @@ export class GraphBase<DN = any, DR = any> {
     return dotRel;
   }
 
-  hasNode(id: Dot["id"]): boolean {
-    return this.nodes.has(id);
+  hasDot(id: Dot["id"]): boolean {
+    return this.dots.has(id);
   }
 
-  deleteNode(id: Dot["id"]): boolean {
-    return this.nodes.delete(id);
+  deleteDot(id: Dot["id"]): boolean {
+    return this.dots.delete(id);
   }
 
   createDotType(name: string) {
     const dotType = new DotType(name);
-    this.dotTypes.set(dotType.id, dotType);
+    this.dotTypes.set(dotType.name, dotType);
     return dotType;
+  }
+
+  getOrCreateDotType(name: string) {
+    if (this.dotTypes.has(name)) return this.dotTypes.get(name)!;
+    else return this.createDotType(name);
+  }
+
+  getOrCreateDotTypes(names: string[]) {
+    return names.map((name) => this.getOrCreateDotType(name));
   }
 
   connectDotTypes(from: DotType, to: DotType, options: { verb?: string } = {}) {
@@ -124,36 +187,40 @@ export class GraphBase<DN = any, DR = any> {
     return Array.from(this.rels.values());
   }
 
-  getNode<N = DN>(id: Dot["id"]): Dot<N> | undefined {
-    return this.nodes.get(id);
+  getDot<N = DN>({ id }: { id: Dot["id"] }): Dot<N> {
+    return this.dots.get(id)!;
   }
 
-  getNodes<N = DN>(): Dot<N>[] {
-    return Array.from<Dot<N>>(this.nodes.values());
+  getDots<N = DN>(): Dot<N>[] {
+    return Array.from<Dot<N>>(this.dots.values());
   }
 
   getRoots<N = DN>() {
-    return this.getNodes<N>().filter((node) => {
+    return this.getDots<N>().filter((node) => {
       return node.in.length === 0;
     });
   }
 
   getLeaves<N = DN>() {
-    return this.getNodes<N>().filter((node) => {
+    return this.getDots<N>().filter((node) => {
       return node.out.length === 0;
     });
   }
 
   getNonLeaves<N = DN>() {
-    return this.getNodes<N>().filter((node) => {
+    return this.getDots<N>().filter((node) => {
       return node.out.length !== 0;
     });
   }
 
   getPaths(
-    startMatcher: Dot<DN> | Dot<DN>[] | ((n: Dot<DN>) => boolean),
+    startMatcher: Dot<DN> | Dot<DN>[],
+    pathFilter?: (rel: DotRel[]) => boolean,
     endMatcher?: Dot<DN> | Dot<DN>[] | ((n: Dot<DN>) => boolean),
-    { maxDepth }: { maxDepth?: number } = {}
+    {
+      maxDepth,
+      direction,
+    }: { maxDepth?: number; direction?: "out" | "in" } = {}
   ) {
     let paths: DotRel[][] = [];
 
@@ -164,27 +231,31 @@ export class GraphBase<DN = any, DR = any> {
     else if (isArray(startMatcher)) _startDots = startMatcher;
 
     _startDots.forEach((startDot) => {
-      this.walk(startDot, (currentNode, currentPath) => {
-        if (currentNode === startMatcher) return;
+      this.walk(
+        startDot,
+        (currentNode, currentPath) => {
+          if (currentNode === startDot) return;
 
-        if (maxDepth && currentPath.length > maxDepth)
-          return IteratorResult.CONTINUE;
+          if (pathFilter && !pathFilter(currentPath))
+            return IteratorResult.CONTINUE;
 
-        if (isDot(endMatcher) && currentNode === endMatcher) {
-          // console.log("currentNode", currentNode);
-          paths.push(currentPath);
-          return IteratorResult.CONTINUE;
-        } else if (
-          isArray(endMatcher) &&
-          endMatcher.some((n) => n === currentNode)
-        ) {
-          paths.push(currentPath);
-          return IteratorResult.CONTINUE;
-        } else if (isFunction(endMatcher) && endMatcher(currentNode)) {
-          paths.push(currentPath);
-          return IteratorResult.CONTINUE;
-        }
-      });
+          if (isDot(endMatcher) && currentNode === endMatcher) {
+            // console.log("currentNode", currentNode);
+            paths.push(currentPath);
+            return IteratorResult.CONTINUE;
+          } else if (
+            isArray(endMatcher) &&
+            endMatcher.some((n) => n === currentNode)
+          ) {
+            paths.push(currentPath);
+            return IteratorResult.CONTINUE;
+          } else if (isFunction(endMatcher) && endMatcher(currentNode)) {
+            paths.push(currentPath);
+            return IteratorResult.CONTINUE;
+          }
+        },
+        { maxDepth, direction }
+      );
     });
 
     return paths;
@@ -195,6 +266,7 @@ export class GraphBase<DN = any, DR = any> {
     iterator?: (node: Dot, currentPath: DotRel[]) => IteratorResult | void,
     options?: {
       maxDepth?: number;
+      direction?: "out" | "in";
     }
   ) {
     let isWalkingStopped = false;
@@ -205,6 +277,8 @@ export class GraphBase<DN = any, DR = any> {
     const walkRecursive = (currentNode: Dot, currentPath: DotRel[]) => {
       // console.log("isWalkingStopped", isWalkingStopped);
       if (isWalkingStopped) return;
+
+      if (options?.maxDepth && currentPath.length > options?.maxDepth) return;
 
       visited.add(currentNode.id);
 
@@ -224,19 +298,31 @@ export class GraphBase<DN = any, DR = any> {
       }
 
       if (options?.maxDepth && currentPath.length > options?.maxDepth) return;
-      if (currentPath.some((rel) => rel.from === currentNode)) {
+      if (
+        currentPath.some((rel) =>
+          options?.direction === "in"
+            ? rel.to === currentNode
+            : rel.from === currentNode
+        )
+      ) {
         isCyclic = true;
         return;
       }
 
-      currentNode.out.forEach((rel) => {
-        walkRecursive(rel.to, currentPath.concat(rel));
-      });
+      if (options?.direction === "in") {
+        currentNode.in.forEach((rel) => {
+          walkRecursive(rel.from, currentPath.concat(rel));
+        });
+      } else {
+        currentNode.out.forEach((rel) => {
+          walkRecursive(rel.to, currentPath.concat(rel));
+        });
+      }
     };
 
     if (node) walkRecursive(node, []);
     else {
-      this.nodes.forEach((node) => {
+      this.dots.forEach((node) => {
         if (!visited.has(node.id)) {
           walkRecursive(node, []);
         }

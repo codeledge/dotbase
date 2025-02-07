@@ -3,14 +3,14 @@ import { DotRel } from "./DotRel";
 import { DotType } from "./DotType";
 
 export type DotCreate<Data> = {
-  id?: number | string;
+  id?: Dot["id"];
   data?: Data;
-  types?: DotType[];
+  typeNames?: string[];
 };
 
 export type DotUpdate<Data> = {
   data?: Data;
-  types?: DotType[];
+  typeNames?: string[];
 };
 
 export class Dot<Data = any> {
@@ -20,7 +20,7 @@ export class Dot<Data = any> {
   out: DotRel[] = [];
   in: DotRel[] = [];
 
-  constructor({ id, data, types = [] }: DotCreate<Data> = {}) {
+  constructor({ id, data, types = [] }: Partial<Dot<Data>> = {}) {
     this.id = id || getId();
     this.data = data;
     this.types = types;
