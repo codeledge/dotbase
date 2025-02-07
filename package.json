@@ -1,5 +1,5 @@
 {
-  "name": "graphbase",
+  "name": "dotbase",
   "version": "0.0.1",
   "description": "Graph base",
   "main": "dist/index.js",
