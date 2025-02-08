@@ -1,12 +1,12 @@
-import { formatDotTypeHtml } from "../html/formatDotTypeHtml";
+import { formatDotTypeHtml } from "./formatDotTypeHtml";
+import { DotTypePreview, DotTypeRelPreview } from "../format/format";
 import { DotType } from "../types/DotType";
-import { DotTypePreview, DotTypeRelPreview } from "./format";
 import fs from "fs";
 
-export const dotTypeToHtml = (
+export const dotTypesToHtmlTree = (
   roots: DotType[],
   {
-    location = "./dot-types.html",
+    location = "./output/dot-types-tree.html",
     dotTypeRelPreview,
     dotTypePreview,
   }: {

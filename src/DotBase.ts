@@ -2,7 +2,7 @@ import { DotType } from "./types/DotType";
 import { DotTypeRel } from "./types/DotTypeRel";
 import { Dot, DotCreate, DotUpdate, isDot } from "./types/Dot";
 import { DotRel, DotRelCreate } from "./types/DotRel";
-import { isArray, isFunction, isString } from "deverything";
+import { isArray, isFunction, isString, uniqueValues } from "deverything";
 
 export enum IteratorResult {
   CONTINUE,
@@ -14,7 +14,13 @@ export class DotBase<DN = any, DR = any> {
   dotTypeRels = new Map<DotTypeRel["id"], DotTypeRel>();
   dots = new Map<Dot["id"], Dot>();
   rels = new Map<DotRel["id"], DotRel>();
+  title;
 
+  constructor({ title }: { title?: string } = {}) {
+    this.title = title;
+  }
+
+  // DOT
   createDot<N = DN>({ id, data, typeNames = [] }: DotCreate<N> = {}): Dot<N> {
     if (id && this.dots.has(id))
       throw new Error(`Dot with id ${id} already exists`);
@@ -30,6 +36,10 @@ export class DotBase<DN = any, DR = any> {
     return node;
   }
 
+  getDot<N = DN>({ id }: { id: Dot["id"] }): Dot<N> {
+    return this.dots.get(id)!;
+  }
+
   getOrCreateDot<N = DN>(dotCreate: DotCreate<N> = {}) {
     if (dotCreate.id && this.dots.has(dotCreate.id)) {
       return this.getDot<N>({ id: dotCreate.id });
@@ -37,17 +47,16 @@ export class DotBase<DN = any, DR = any> {
     return this.createDot<N>(dotCreate);
   }
 
-  updateDot<N = DN>(dotId: Dot["id"], dotUpdate: DotUpdate<N> = {}) {
-    if (!this.dots.has(dotId)) {
+  updateDot<N = DN>(dotId: Dot["id"], dotUpdate: DotUpdate<N> = {}): Dot<N> {
+    if (!this.hasDot(dotId)) {
       throw new Error(`Dot with id ${dotId} does not exist`);
     }
 
     const dot = this.getDot<N>({ id: dotId });
 
-    dot.data = dotUpdate.data || dot.data;
-    dot.types = dotUpdate.typeNames
-      ? this.getOrCreateDotTypes(dotUpdate.typeNames)
-      : dot.types;
+    if (dotUpdate.data) dot.data = dotUpdate.data;
+    if (dotUpdate.typeNames?.length)
+      dot.types = this.getOrCreateDotTypes(dotUpdate.typeNames);
 
     return dot;
   }
@@ -55,35 +64,23 @@ export class DotBase<DN = any, DR = any> {
   mergeDot<N = DN>(dotCreate: DotCreate<N> = {}): Dot<N> {
     if (dotCreate.id && this.hasDot(dotCreate.id)) {
       const existing = this.getDot<N>({ id: dotCreate.id });
-      const merged = {
-        ...existing,
-        ...dotCreate, // very primitive merge
-      };
+      const mergedData = {
+        ...existing.data,
+        ...dotCreate.data, // very primitive merge
+      } as N;
+      const mergedTypeNames = dotCreate.typeNames
+        ? uniqueValues(
+            existing.types.map(({ name }) => name).concat(dotCreate.typeNames)
+          )
+        : undefined;
       // if (merged.types.length === 2) console.log("merged", merged.id);
-      this.dots.set(existing.id, merged);
-      return this.getDot<N>({ id: dotCreate.id });
+      return this.updateDot<N>(existing.id, {
+        data: mergedData,
+        typeNames: mergedTypeNames,
+      });
     }
 
-    const node = new Dot<N>(dotCreate);
-    this.dots.set(node.id, node);
-    return node;
-  }
-
-  mergePattern<F = DN, R = DR, T = DN>(
-    fromDotCreate: Dot<F> | DotCreate<F>,
-    dotRelCreate: DotRelCreate<R>,
-    toDotCreate: Dot<T> | DotCreate<T>
-  ) {
-    const fromDot = this.getOrCreateDot<F>(fromDotCreate);
-    const toDot = this.getOrCreateDot<T>(toDotCreate);
-
-    const dotRel = this.connectDots(fromDot, toDot, dotRelCreate);
-
-    return {
-      fromDot,
-      dotRel,
-      toDot,
-    };
+    return this.createDot(dotCreate);
   }
 
   findDot<N = DN>({
@@ -116,23 +113,8 @@ export class DotBase<DN = any, DR = any> {
     });
   }
 
-  connectDots<F = DN, T = DN, R = DR>(
-    from: Dot<F>,
-    to: Dot<T>,
-    {
-      skipDuplicates,
-      data,
-      verb,
-    }: { skipDuplicates?: boolean; data?: R; verb?: string } = {}
-  ) {
-    if (skipDuplicates && from.out.some((rel) => rel.to === to)) return;
-
-    const dotRel = new DotRel(from, to, { verb, data });
-    this.rels.set(dotRel.id, dotRel);
-    from.out.push(dotRel);
-    to.in.push(dotRel);
-
-    return dotRel;
+  getDots<N = DN>(): Dot<N>[] {
+    return Array.from<Dot<N>>(this.dots.values());
   }
 
   hasDot(id: Dot["id"]): boolean {
@@ -143,13 +125,32 @@ export class DotBase<DN = any, DR = any> {
     return this.dots.delete(id);
   }
 
-  createDotType(name: string) {
+  getRoots<N = DN>() {
+    return this.getDots<N>().filter((node) => {
+      return node.in.length === 0;
+    });
+  }
+
+  getLeaves<N = DN>() {
+    return this.getDots<N>().filter((node) => {
+      return node.out.length === 0;
+    });
+  }
+
+  getNonLeaves<N = DN>() {
+    return this.getDots<N>().filter((node) => {
+      return node.out.length !== 0;
+    });
+  }
+
+  // DOT TYPE
+  createDotType(name: string): DotType {
     const dotType = new DotType(name);
     this.dotTypes.set(dotType.name, dotType);
     return dotType;
   }
 
-  getOrCreateDotType(name: string) {
+  getOrCreateDotType(name: string): DotType {
     if (this.dotTypes.has(name)) return this.dotTypes.get(name)!;
     else return this.createDotType(name);
   }
@@ -175,6 +176,32 @@ export class DotBase<DN = any, DR = any> {
     });
   }
 
+  getDotTypeRoots(): DotType[] {
+    return this.getDotTypes().filter((dotType) => {
+      return dotType.in.length === 0;
+    });
+  }
+
+  // REL
+  connectDots<F = DN, T = DN, R = DR>(
+    from: Dot<F>,
+    to: Dot<T>,
+    {
+      skipDuplicates,
+      data,
+      verb,
+    }: { skipDuplicates?: boolean; data?: R; verb?: string } = {}
+  ) {
+    if (skipDuplicates && from.out.some((rel) => rel.to === to)) return;
+
+    const dotRel = new DotRel(from, to, { verb, data });
+    this.rels.set(dotRel.id, dotRel);
+    from.out.push(dotRel);
+    to.in.push(dotRel);
+
+    return dotRel;
+  }
+
   getRel<R = DR>(id: DotRel<R>["id"]): DotRel<R> | undefined {
     return this.rels.get(id);
   }
@@ -183,32 +210,25 @@ export class DotBase<DN = any, DR = any> {
     return Array.from(this.rels.values());
   }
 
-  getDot<N = DN>({ id }: { id: Dot["id"] }): Dot<N> {
-    return this.dots.get(id)!;
+  // PATTERN
+  mergePattern<F = DN, R = DR, T = DN>(
+    fromDotCreate: Dot<F> | DotCreate<F>,
+    dotRelCreate: DotRelCreate<R>,
+    toDotCreate: Dot<T> | DotCreate<T>
+  ) {
+    const fromDot = this.getOrCreateDot<F>(fromDotCreate);
+    const toDot = this.getOrCreateDot<T>(toDotCreate);
+
+    const dotRel = this.connectDots(fromDot, toDot, dotRelCreate);
+
+    return {
+      fromDot,
+      dotRel,
+      toDot,
+    };
   }
 
-  getDots<N = DN>(): Dot<N>[] {
-    return Array.from<Dot<N>>(this.dots.values());
-  }
-
-  getRoots<N = DN>() {
-    return this.getDots<N>().filter((node) => {
-      return node.in.length === 0;
-    });
-  }
-
-  getLeaves<N = DN>() {
-    return this.getDots<N>().filter((node) => {
-      return node.out.length === 0;
-    });
-  }
-
-  getNonLeaves<N = DN>() {
-    return this.getDots<N>().filter((node) => {
-      return node.out.length !== 0;
-    });
-  }
-
+  // PATH
   getPaths(
     startMatcher: Dot<DN> | Dot<DN>[],
     pathFilter?: (rel: DotRel[]) => boolean,
@@ -258,8 +278,11 @@ export class DotBase<DN = any, DR = any> {
   }
 
   walk(
-    node?: Dot,
-    iterator?: (node: Dot, currentPath: DotRel[]) => IteratorResult | void,
+    fromDot?: Dot,
+    iterator?: (
+      currentDot: Dot,
+      currentPath: DotRel[]
+    ) => IteratorResult | void,
     options?: {
       maxDepth?: number;
       direction?: "out" | "in";
@@ -316,7 +339,7 @@ export class DotBase<DN = any, DR = any> {
       }
     };
 
-    if (node) walkRecursive(node, []);
+    if (fromDot) walkRecursive(fromDot, []);
     else {
       this.dots.forEach((node) => {
         if (!visited.has(node.id)) {

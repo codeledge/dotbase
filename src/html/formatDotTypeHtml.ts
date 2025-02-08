@@ -1,5 +1,5 @@
 import { DotType } from "../types/DotType";
-import { DotTypePreview, DotTypeRelPreview } from "../lib/format";
+import { DotTypePreview, DotTypeRelPreview } from "../format/format";
 import { formatDotTypeRelHtml } from "./formatDotTypeRelHtml";
 import { formatDotTypeSummaryHtml } from "./formatDotTypeSummaryHtml";
 

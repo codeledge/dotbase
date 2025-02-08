@@ -1,4 +1,5 @@
-import { DotPreview } from "../lib/format";
+import { DotPreview } from "../format/format";
+import { formatDotText } from "../format/formatDotText";
 import { Dot } from "../types/Dot";
 
 export type Options = {
@@ -10,7 +11,7 @@ export const formatDotSummaryHtml = (
   _options: Options,
   _depth: number
 ) => {
-  return `<div style="display:inline-block">${entity.id} ${entity.types.map(
-    ({ name }) => `[${name}]`
-  )}</div><br>`;
+  return `<div style="display:inline-block">${formatDotText(entity, {
+    showTypes: true,
+  })}</div><br>`;
 };

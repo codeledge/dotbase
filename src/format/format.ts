@@ -1,9 +1,9 @@
 import { PlainObject, isBoolean } from "deverything";
-import { pick } from "./pick";
 import { DotType } from "../types/DotType";
 import { Dot } from "../types/Dot";
 import { DotRel } from "../types/DotRel";
 import { DotTypeRel } from "../types/DotTypeRel";
+import { pick } from "../lib/pick";
 
 export type FormatNodeOptions = Partial<Record<keyof Dot, boolean>>;
 
@@ -22,8 +22,7 @@ export type NodeSelect =
       in: boolean | RelSelect;
       out: boolean | RelSelect;
     }>
-  | boolean
-  | "COMPACT";
+  | boolean;
 
 export type RelSelect =
   | Partial<{
@@ -41,25 +40,23 @@ export type DotTypeSelect =
     }>
   | boolean;
 
-export const formatNode = (node: Dot, options?: NodeSelect): any => {
-  if (isBoolean(options)) return options ? node : undefined;
-  if (options === "COMPACT")
-    return `${node.id} ${node.types.map((t) => `[${t.name}]`).join("")}`;
+export const formatDot = (dot: Dot, options?: NodeSelect): any => {
+  if (isBoolean(options)) return options ? dot : undefined;
 
   return {
-    ...(options?.preview && { preview: options.preview(node) }),
-    ...(options?.id && { id: node.id }),
-    ...(options?.types && { types: formatDotTypes(node.types, options.types) }),
+    ...(options?.preview && { preview: options.preview(dot) }),
+    ...(options?.id && { id: dot.id }),
+    ...(options?.types && { types: formatDotTypes(dot.types, options.types) }),
     ...(options?.data && {
       data: isBoolean(options.data)
         ? options.data
-        : pick(node.data, options.data),
+        : pick(dot.data, options.data),
     }),
     ...(options?.in && {
-      in: node.in.map<any>((rel) => formatRel(rel, options?.in)),
+      in: dot.in.map<any>((rel) => formatRel(rel, options?.in)),
     }),
     ...(options?.out && {
-      out: node.out.map<any>((rel) => formatRel(rel, options?.out)),
+      out: dot.out.map<any>((rel) => formatRel(rel, options?.out)),
     }),
   };
 };
@@ -77,7 +74,7 @@ export const formatDotType = (
 export const formatNodes = (nodes: Dot[], options?: NodeSelect): any => {
   if (isBoolean(options)) return options ? nodes : undefined;
 
-  return nodes.map((node) => formatNode(node, options));
+  return nodes.map((node) => formatDot(node, options));
 };
 
 export const formatDotTypes = (
@@ -96,8 +93,8 @@ export const formatRel = (rel: DotRel, options?: RelSelect): any => {
     ...(options?.id && { id: rel.id }),
     ...(options?.data && { data: rel.data }),
     ...(options?.verb && { verb: rel.verb }),
-    ...(options?.from && { from: formatNode(rel.from, options?.from) }),
-    ...(options?.to && { to: formatNode(rel.to, options?.to) }),
+    ...(options?.from && { from: formatDot(rel.from, options?.from) }),
+    ...(options?.to && { to: formatDot(rel.to, options?.to) }),
   };
 };
 
