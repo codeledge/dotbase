@@ -1,8 +1,8 @@
 import { describe, expect, test } from "@jest/globals";
-import { GraphBase } from "./GraphBase";
+import { DotBase } from "./DotBase";
 
-describe("GraphBase", () => {
-  const gb = new GraphBase();
+describe("DotBase", () => {
+  const gb = new DotBase();
   test("createDot", async () => {
     const a = gb.createDot();
     const b = gb.createDot();

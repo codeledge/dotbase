@@ -9,17 +9,13 @@ export enum IteratorResult {
   STOP,
 }
 
-export class GraphBase<DN = any, DR = any> {
+export class DotBase<DN = any, DR = any> {
   dotTypes = new Map<DotType["name"], DotType>();
   dotTypeRels = new Map<DotTypeRel["id"], DotTypeRel>();
   dots = new Map<Dot["id"], Dot>();
   rels = new Map<DotRel["id"], DotRel>();
 
-  createDot<N = DN>({
-    id,
-    data,
-    typeNames = [],
-  }: DotCreate<N> = {}): Dot<N> {
+  createDot<N = DN>({ id, data, typeNames = [] }: DotCreate<N> = {}): Dot<N> {
     if (id && this.dots.has(id))
       throw new Error(`Dot with id ${id} already exists`);
 
