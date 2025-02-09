@@ -192,7 +192,16 @@ export class DotBase<DN = any, DR = any> {
       verb,
     }: { skipDuplicates?: boolean; data?: R; verb?: string } = {}
   ) {
-    if (skipDuplicates && from.out.some((rel) => rel.to === to)) return;
+    if (
+      skipDuplicates &&
+      from.out.some((rel) => {
+        return rel.to === to && rel.verb === verb;
+        // TODO: skip also on data
+      })
+    )
+      return;
+
+    // add inverse? is it useful at all?
 
     const dotRel = new DotRel(from, to, { verb, data });
     this.rels.set(dotRel.id, dotRel);
@@ -208,6 +217,11 @@ export class DotBase<DN = any, DR = any> {
 
   getRels(): DotRel[] {
     return Array.from(this.rels.values());
+  }
+
+  // DOT TYPE RELS
+  getDotTypeRels(): DotTypeRel[] {
+    return Array.from(this.dotTypeRels.values());
   }
 
   // PATTERN

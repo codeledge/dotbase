@@ -19,13 +19,15 @@ export const parsePlainTextDotTypes = (fileContent: string) => {
       continue;
     }
 
-    const name = line.trim();
+    const { name, verb } = extractVerb(line);
     const level = countLeadingTabs(line);
     const dotType = db.getOrCreateDotType(name);
     if (level > 0) {
       const parent = levelParent[level - 1];
       if (parent) {
-        db.connectDotTypes(parent, dotType, { verb: settings.defaultVerb });
+        db.connectDotTypes(parent, dotType, {
+          verb: verb || settings.defaultVerb,
+        });
       }
     }
     levelParent[level] = dotType;
@@ -33,3 +35,14 @@ export const parsePlainTextDotTypes = (fileContent: string) => {
 
   return db;
 };
+
+function extractVerb(input: string): { name: string; verb?: string } {
+  const regex = /\{([^\}]*)\}/;
+
+  const verb = input.match(regex)?.[1].trim();
+
+  // Remove labels from the name
+  const name = input.replace(regex, "").trim();
+
+  return { name, verb };
+}
