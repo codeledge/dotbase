@@ -2,6 +2,7 @@ import { DotBase } from "../DotBase";
 import { countLeadingTabs } from "./countLeadingTabs";
 import { DotType } from "../types/DotType";
 import { Verb } from "../const/Verb";
+import { parseLine } from "./parseLine";
 
 export const parsePlainTextDotTypes = (fileContent: string) => {
   const lines = fileContent.split("\n");
@@ -19,7 +20,7 @@ export const parsePlainTextDotTypes = (fileContent: string) => {
       continue;
     }
 
-    const { name, verb } = extractVerb(line);
+    const { name, verb } = parseLine(line);
     const level = countLeadingTabs(line);
     const dotType = db.getOrCreateDotType(name);
     if (level > 0) {
@@ -35,14 +36,3 @@ export const parsePlainTextDotTypes = (fileContent: string) => {
 
   return db;
 };
-
-function extractVerb(input: string): { name: string; verb?: string } {
-  const regex = /\{([^\}]*)\}/;
-
-  const verb = input.match(regex)?.[1].trim();
-
-  // Remove labels from the name
-  const name = input.replace(regex, "").trim();
-
-  return { name, verb };
-}

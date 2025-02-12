@@ -7,7 +7,7 @@ describe("formatTreeText", () => {
   test("formatTreeText", async () => {
     const db = parsePlainTextDotBase(`
 A[1]
-\tB [2]
+\t{shoots} B [2]
 \t\tC [3]
 \t\t\tZ [3]
 \t\tK [3]
