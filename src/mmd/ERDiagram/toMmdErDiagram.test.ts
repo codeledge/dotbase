@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
-import { parsePlainTextDotTypes } from "../parse/parsePlainTextDotTypes";
+import { parsePlainTextDotTypes } from "../../parse/parsePlainTextDotTypes";
 import { toMmdErDiagram } from "./toMmdErDiagram";
-import { toMmdHtml } from "./toMmdHtml";
+import { toMmdHtml } from "../toMmdHtml";
 
 describe("toMmdErDiagram", () => {
   const file = `

@@ -1,4 +1,4 @@
-import { DotTypeRel } from "../types/DotTypeRel";
+import { DotTypeRel } from "../../types/DotTypeRel";
 
 export const toMmdErDiagram = (
   dotTypeRels: DotTypeRel[],

@@ -1,13 +1,12 @@
 import { Dot } from "../types/Dot";
 
-export const formatDotText = (
-  dot: Dot,
-  options?: {
-    showTypes?: boolean;
-  }
-): any => {
+export type DotTextOptions = {
+  hideTypes?: boolean;
+};
+
+export const formatDotText = (dot: Dot, options: DotTextOptions = {}): any => {
   let string = `${dot.id}`;
-  if (options?.showTypes) {
+  if (!options.hideTypes) {
     string += ` ${dot.types.map((t) => `[${t.name}]`).join("")}`;
   }
   return string;

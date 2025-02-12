@@ -1,13 +1,8 @@
 import { DotType } from "./types/DotType";
 import { DotTypeRel } from "./types/DotTypeRel";
-import { Dot, DotCreate, DotUpdate, isDot } from "./types/Dot";
+import { Dot, DotCreate, DotUpdate } from "./types/Dot";
 import { DotRel, DotRelCreate } from "./types/DotRel";
-import { isArray, isFunction, isString, uniqueValues } from "deverything";
-
-export enum IteratorResult {
-  CONTINUE,
-  STOP,
-}
+import { isFunction, isString, uniqueValues } from "deverything";
 
 export class DotBase<DN = any, DR = any> {
   dotTypes = new Map<DotType["name"], DotType>();
@@ -239,133 +234,6 @@ export class DotBase<DN = any, DR = any> {
       fromDot,
       dotRel,
       toDot,
-    };
-  }
-
-  // PATH
-  getPaths(
-    startMatcher: Dot<DN> | Dot<DN>[],
-    pathFilter?: (rel: DotRel[]) => boolean,
-    endMatcher?: Dot<DN> | Dot<DN>[] | ((n: Dot<DN>) => boolean),
-    {
-      maxDepth,
-      direction,
-    }: { maxDepth?: number; direction?: "out" | "in" } = {}
-  ) {
-    let paths: DotRel[][] = [];
-
-    if (!startMatcher) return paths; // TODO: return all paths
-
-    let _startDots: Dot<DN>[] = [];
-    if (isDot(startMatcher)) _startDots = [startMatcher];
-    else if (isArray(startMatcher)) _startDots = startMatcher;
-
-    _startDots.forEach((startDot) => {
-      this.walk(
-        startDot,
-        (currentNode, currentPath) => {
-          if (currentNode === startDot) return;
-
-          if (pathFilter && !pathFilter(currentPath))
-            return IteratorResult.CONTINUE;
-
-          if (isDot(endMatcher) && currentNode === endMatcher) {
-            // console.log("currentNode", currentNode);
-            paths.push(currentPath);
-            return IteratorResult.CONTINUE;
-          } else if (
-            isArray(endMatcher) &&
-            endMatcher.some((n) => n === currentNode)
-          ) {
-            paths.push(currentPath);
-            return IteratorResult.CONTINUE;
-          } else if (isFunction(endMatcher) && endMatcher(currentNode)) {
-            paths.push(currentPath);
-            return IteratorResult.CONTINUE;
-          }
-        },
-        { maxDepth, direction }
-      );
-    });
-
-    return paths;
-  }
-
-  walk(
-    fromDot?: Dot,
-    iterator?: (
-      currentDot: Dot,
-      currentPath: DotRel[]
-    ) => IteratorResult | void,
-    options?: {
-      maxDepth?: number;
-      direction?: "out" | "in";
-    }
-  ) {
-    let isWalkingStopped = false;
-    let isCyclic = false;
-    let deepestPath: DotRel[] = [];
-    const visited = new Set<Dot["id"]>();
-
-    const walkRecursive = (currentNode: Dot, currentPath: DotRel[]) => {
-      // console.log("isWalkingStopped", isWalkingStopped);
-      if (isWalkingStopped) return;
-
-      if (options?.maxDepth && currentPath.length > options?.maxDepth) return;
-
-      visited.add(currentNode.id);
-
-      if (currentPath.length > deepestPath.length) {
-        deepestPath = currentPath;
-      }
-
-      const result = iterator?.(currentNode, currentPath);
-
-      if (result === IteratorResult.STOP) {
-        isWalkingStopped = true;
-        return;
-      }
-
-      if (result === IteratorResult.CONTINUE) {
-        return;
-      }
-
-      if (options?.maxDepth && currentPath.length > options?.maxDepth) return;
-      if (
-        currentPath.some((rel) =>
-          options?.direction === "in"
-            ? rel.to === currentNode
-            : rel.from === currentNode
-        )
-      ) {
-        isCyclic = true;
-        return;
-      }
-
-      if (options?.direction === "in") {
-        currentNode.in.forEach((rel) => {
-          walkRecursive(rel.from, currentPath.concat(rel));
-        });
-      } else {
-        currentNode.out.forEach((rel) => {
-          walkRecursive(rel.to, currentPath.concat(rel));
-        });
-      }
-    };
-
-    if (fromDot) walkRecursive(fromDot, []);
-    else {
-      this.dots.forEach((node) => {
-        if (!visited.has(node.id)) {
-          walkRecursive(node, []);
-        }
-      });
-    }
-
-    return {
-      isCyclic,
-      deepestPath,
-      isWalkingStopped,
     };
   }
 }
