@@ -1,3 +1,4 @@
+import { last } from "deverything";
 import { Dot } from "../types/Dot";
 import { DotRel } from "../types/DotRel";
 
@@ -17,16 +18,29 @@ export const walk = (
   let isWalkingStopped = false;
   let isCyclic = false;
   let deepestPath: DotRel[] = [];
-  const visited = new Set<Dot["id"]>();
+  const visitedDots = new Set<Dot["id"]>();
+  const visitedRels = new Set<DotRel["id"]>();
 
   const walkRecursive = (currentNode: Dot, currentPath: DotRel[]) => {
     // console.log("isWalkingStopped", isWalkingStopped);
     if (isWalkingStopped) return;
 
-    if (options?.maxDepth && currentPath.length > options?.maxDepth) return;
+    // dont do if(visitedDots.has(dot.id))
+    // because a dot could be visited but not all its rels
+
+    if (currentPath.length > 0) {
+      if (visitedRels.has(last(currentPath).id)) {
+        isCyclic = true;
+        return;
+      }
+      if (options?.maxDepth && currentPath.length > options?.maxDepth) return;
+    }
 
     // Now we start visiting from here
-    visited.add(currentNode.id);
+    if (currentPath.length > 0) {
+      visitedRels.add(last(currentPath).id);
+    }
+    visitedDots.add(currentNode.id);
 
     if (currentPath.length > deepestPath.length) {
       deepestPath = currentPath;
@@ -43,17 +57,6 @@ export const walk = (
       return;
     }
 
-    if (
-      currentPath.some((rel) =>
-        options?.direction === "in"
-          ? rel.to === currentNode
-          : rel.from === currentNode
-      )
-    ) {
-      isCyclic = true;
-      return; // don't use the visited dot, but as an optmization, visited rels could be used
-    }
-
     // BFS
     if (options?.direction === "in") {
       currentNode.in.forEach((rel) => {
@@ -67,7 +70,7 @@ export const walk = (
   };
 
   fromDots.forEach((dot) => {
-    if (!visited.has(dot.id)) {
+    if (!visitedDots.has(dot.id)) {
       walkRecursive(dot, []);
     }
   });

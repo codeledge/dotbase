@@ -1,6 +1,6 @@
 {
   "name": "dotbase",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "In-memory representation of a fully featured graph database with label taxonomy",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

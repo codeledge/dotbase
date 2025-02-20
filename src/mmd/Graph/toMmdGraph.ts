@@ -1,27 +1,73 @@
 import { walk } from "../../lib/walk";
 import { Dot } from "../../types/Dot";
 import { DotRel } from "../../types/DotRel";
+import { getMmdId } from "../getMmdId";
 
-export const toMmdGraph = (dots: Dot[]) => {
-  let mmdString = `graph\n`; // or flowchart, it's the same
+// https://mermaid.js.org/syntax/flowchart.html
+export type Shape =
+  | "bolt"
+  | "brace-r"
+  | "brace"
+  | "braces"
+  | "circle"
+  | "cyl"
+  | "delay"
+  | "diam"
+  | "docs"
+  | "fork"
+  | "hex"
+  | "hourglass"
+  | "notch-rect"
+  | "rect"
+  | "rounded"
+  | "stadium"
+  | "subproc"
+  | "tri";
 
-  walk(dots, (currentDot, currentPath) => {
+export const toMmdGraph = (
+  dots: Dot[],
+  options: {
+    title?: string;
+    labelsAs?: Record<string, Shape>;
+  } = {}
+) => {
+  let mmdString = ``;
+
+  if (options?.title) {
+    mmdString += `---\ntitle: ${options?.title}\n---\n`;
+  }
+
+  mmdString += `graph\n`; // or flowchart, it's the same
+
+  walk(dots, (_, currentPath) => {
     if (currentPath.length === 0) return; // TODO: fix this when a lone dot is passed
     const lastRel = currentPath[currentPath.length - 1];
-    mmdString += `\t${formatBlock(lastRel.from)} ${
-      GraphArrows.solidWithTip
-    }${formatVerb(lastRel, { showVerb: true })} ${formatBlock(lastRel.to)}\n`;
+    mmdString += `\t${formatBlock(lastRel.from, options)} ${formatVerb(
+      lastRel,
+      {
+        showVerb: true,
+      }
+    )} ${formatBlock(lastRel.to, options)}\n`;
   });
 
   return mmdString;
 };
 
-const formatBlock = (target: Dot) => {
-  return `${target.id}["${target.id}"]`;
+const formatBlock = (
+  dot: Dot,
+  options: { labelsAs?: Record<string, Shape> } = {}
+) => {
+  return `${getMmdId(dot.id)}@${JSON.stringify({
+    shape: options.labelsAs?.[dot.types[0]?.name] || "rect",
+    label: dot.id,
+  })}`;
 };
 
 const formatVerb = (rel: DotRel, options: { showVerb?: boolean } = {}) => {
-  return options.showVerb && rel.verb ? `|${rel.verb}|` : "";
+  let relString = `${GraphArrows.solidWithTip}`;
+  if (options.showVerb && rel.verb) relString += `|"\`${rel.verb}\`"|`;
+
+  return relString;
 };
 
 export enum GraphArrows {
