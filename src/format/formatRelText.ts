@@ -1,4 +1,4 @@
-import { DotRel } from "../types/DotRel";
+import { Rel } from "../types/Rel";
 import { DotTextOptions, formatDotText } from "./formatDotText";
 
 export type RelTextOptions = {
@@ -9,10 +9,7 @@ export type RelTextOptions = {
   orientation?: "right" | "down";
 } & DotTextOptions;
 
-export const formatRelText = (
-  rel: DotRel,
-  options?: RelTextOptions
-): string => {
+export const formatRelText = (rel: Rel, options?: RelTextOptions): string => {
   let string = ``;
 
   // FROM
@@ -39,10 +36,10 @@ export const formatRelText = (
   return string;
 };
 
-const formatRelArrow = (re: DotRel, options?: RelTextOptions): string => {
+const formatRelArrow = (rel: Rel, options?: RelTextOptions): string => {
   let string = formatRelTail(options);
-  if (re.verb && !options?.hideVerb) {
-    string += `{${re.verb}}-`;
+  if (rel.verb && !options?.hideVerb) {
+    string += `${rel.verb}-`;
   }
   string += ">";
 

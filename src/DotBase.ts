@@ -1,14 +1,14 @@
-import { DotType } from "./types/DotType";
-import { DotTypeRel } from "./types/DotTypeRel";
+import { Label } from "./types/Label";
+import { LabelRel } from "./types/LabelRel";
 import { Dot, DotCreate, DotUpdate } from "./types/Dot";
-import { DotRel, DotRelCreate } from "./types/DotRel";
-import { isFunction, isString, uniqueValues } from "deverything";
+import { Rel, RelCreate } from "./types/Rel";
+import { isFunction, uniqueValues } from "deverything";
 
 export class DotBase<DN = any, DR = any> {
-  dotTypes = new Map<DotType["name"], DotType>();
-  dotTypeRels = new Map<DotTypeRel["id"], DotTypeRel>();
-  dots = new Map<Dot["id"], Dot>();
-  rels = new Map<DotRel["id"], DotRel>();
+  labelMap = new Map<Label["name"], Label>();
+  labelRelMap = new Map<LabelRel["id"], LabelRel>();
+  dotMap = new Map<Dot["id"], Dot>();
+  relMap = new Map<Rel["id"], Rel>();
   title;
 
   constructor({ title }: { title?: string } = {}) {
@@ -16,30 +16,19 @@ export class DotBase<DN = any, DR = any> {
   }
 
   // DOT
-  createDot<N = DN>({ id, data, typeNames = [] }: DotCreate<N> = {}): Dot<N> {
-    if (id && this.dots.has(id))
+  createDot<N = DN>({ id, data, labels = [] }: DotCreate<N> = {}): Dot<N> {
+    if (id && this.dotMap.has(id))
       throw new Error(`Dot with id ${id} already exists`);
 
-    const types = this.getOrCreateDotTypes(typeNames);
+    const Labels = this.mergeLabels(labels);
 
-    const node = new Dot<N>({
-      id,
-      data,
-      types,
-    });
-    this.dots.set(node.id, node);
-    return node;
+    const dot = new Dot<N>(id, Labels, data);
+    this.dotMap.set(dot.id, dot);
+    return dot;
   }
 
-  getDot<N = DN>({ id }: { id: Dot["id"] }): Dot<N> {
-    return this.dots.get(id)!;
-  }
-
-  getOrCreateDot<N = DN>(dotCreate: DotCreate<N> = {}) {
-    if (dotCreate.id && this.dots.has(dotCreate.id)) {
-      return this.getDot<N>({ id: dotCreate.id });
-    }
-    return this.createDot<N>(dotCreate);
+  getDot<N = DN>(id: Dot["id"]): Dot<N> {
+    return this.dotMap.get(id)!;
   }
 
   updateDot<N = DN>(dotId: Dot["id"], dotUpdate: DotUpdate<N> = {}): Dot<N> {
@@ -47,77 +36,77 @@ export class DotBase<DN = any, DR = any> {
       throw new Error(`Dot with id ${dotId} does not exist`);
     }
 
-    const dot = this.getDot<N>({ id: dotId });
+    const dot = this.getDot<N>(dotId);
 
     if (dotUpdate.data) dot.data = dotUpdate.data;
-    if (dotUpdate.typeNames?.length)
-      dot.types = this.getOrCreateDotTypes(dotUpdate.typeNames);
+    if (dotUpdate.labels?.length)
+      dot.labels = this.mergeLabels(dotUpdate.labels);
 
     return dot;
   }
 
   mergeDot<N = DN>(dotCreate: DotCreate<N> = {}): Dot<N> {
     if (dotCreate.id && this.hasDot(dotCreate.id)) {
-      const existing = this.getDot<N>({ id: dotCreate.id });
+      const existing = this.getDot<N>(dotCreate.id);
       const mergedData = {
         ...existing.data,
         ...dotCreate.data, // very primitive merge
       } as N;
-      const mergedTypeNames = dotCreate.typeNames
-        ? uniqueValues(
-            existing.types.map(({ name }) => name).concat(dotCreate.typeNames)
-          )
+      const mergedLabels = dotCreate.labels
+        ? (uniqueValues(
+            existing.labels.map(({ name }) => name).concat(dotCreate.labels)
+          ) as string[])
         : undefined;
       // if (merged.types.length === 2) console.log("merged", merged.id);
       return this.updateDot<N>(existing.id, {
         data: mergedData,
-        typeNames: mergedTypeNames,
+        labels: mergedLabels,
       });
     }
 
     return this.createDot(dotCreate);
   }
 
-  findDot<N = DN>({
-    id,
-    types,
-    type,
-  }: Partial<Dot> & { type?: string }): Dot<N> | undefined {
-    const _types = types || [];
-    if (type) _types.push(this.findDotType(type)!);
-    return this.getDots<N>().find((dot) => {
-      return dot.id === id || dot.types.some((type) => _types?.includes(type));
-    });
-  }
-
   findDots<N = DN>(
-    filter: (Partial<Dot> & { type?: string | DotType }) | ((d: Dot) => boolean)
+    filter:
+      | {
+          data?: any; // TODO
+          label?: string;
+          labels?: string[];
+          taxon?: string;
+        }
+      | ((d: Dot) => boolean)
   ): Dot<N>[] {
     if (isFunction(filter)) return this.getDots<N>().filter(filter);
 
-    const _types = filter.types || [];
-    if (filter.type)
-      _types.push(
-        isString(filter.type) ? this.findDotType(filter.type)! : filter.type
-      );
+    const _labels = filter.labels || [];
+    if (filter.label) _labels.push(filter.label);
+    if (filter.taxon) {
+      const flatTaxonomy = this.getFlatTaxonomy(filter.taxon);
+      if (flatTaxonomy) _labels.push(...flatTaxonomy);
+    }
     return this.getDots<N>().filter((dot) => {
-      return (
-        (filter.id ? dot.id === filter.id : true) &&
-        (_types.length ? dot.types.some((type) => _types.includes(type)) : true)
-      );
+      return _labels.length
+        ? dot.labels.some(({ name }) => _labels.includes(name))
+        : true;
     });
   }
 
   getDots<N = DN>(): Dot<N>[] {
-    return Array.from<Dot<N>>(this.dots.values());
+    return Array.from<Dot<N>>(this.dotMap.values());
   }
 
   hasDot(id: Dot["id"]): boolean {
-    return this.dots.has(id);
+    return this.dotMap.has(id);
   }
 
   deleteDot(id: Dot["id"]): boolean {
-    return this.dots.delete(id);
+    this.getRels().forEach((rel) => {
+      if (rel.from.id === id || rel.to.id === id) {
+        this.relMap.delete(rel.id);
+      }
+    });
+    return this.dotMap.delete(id);
   }
 
   getRoots<N = DN>() {
@@ -138,43 +127,45 @@ export class DotBase<DN = any, DR = any> {
     });
   }
 
-  // DOT TYPE
-  createDotType(name: string): DotType {
-    const dotType = new DotType(name);
-    this.dotTypes.set(dotType.name, dotType);
-    return dotType;
+  // LABEL
+  createLabel(name: string): Label {
+    const label = new Label(name);
+    this.labelMap.set(label.name, label);
+    return label;
   }
 
-  getOrCreateDotType(name: string): DotType {
-    if (this.dotTypes.has(name)) return this.dotTypes.get(name)!;
-    else return this.createDotType(name);
+  mergeLabel(name: string): Label {
+    return this.getLabel(name) || this.createLabel(name);
   }
 
-  getOrCreateDotTypes(names: string[]) {
-    return names.map((name) => this.getOrCreateDotType(name));
+  mergeLabels(labels: string[]) {
+    return labels.map((name) => this.mergeLabel(name));
   }
 
-  connectDotTypes(from: DotType, to: DotType, options: { verb?: string } = {}) {
-    const rel = new DotTypeRel(from, to, options);
-    this.dotTypeRels.set(rel.id, rel);
+  connectLabels(from: Label, to: Label, options: { verb?: string } = {}) {
+    const rel = new LabelRel(from, to, options);
+    this.labelRelMap.set(rel.id, rel);
     from.out.push(rel);
     to.in.push(rel);
   }
 
-  getDotTypes(): DotType[] {
-    return Array.from(this.dotTypes.values());
+  getLabels(): Label[] {
+    return Array.from(this.labelMap.values());
   }
 
-  findDotType(name: string): DotType | undefined {
-    return this.getDotTypes().find((dotType) => {
-      return dotType.name === name;
-    });
+  getLabel(name: string): Label | undefined {
+    return this.labelMap.get(name);
   }
 
-  getDotTypeRoots(): DotType[] {
-    return this.getDotTypes().filter((dotType) => {
+  getLabelRoots(): Label[] {
+    return this.getLabels().filter((dotType) => {
       return dotType.in.length === 0;
     });
+  }
+
+  // TAXONOMY
+  getFlatTaxonomy(label: string): Label["name"][] | undefined {
+    return this.getLabel(label)?._asTaxon?.map(({ name }) => name);
   }
 
   // REL
@@ -198,35 +189,35 @@ export class DotBase<DN = any, DR = any> {
 
     // add inverse? is it useful at all?
 
-    const dotRel = new DotRel(from, to, { verb, data });
-    this.rels.set(dotRel.id, dotRel);
+    const dotRel = new Rel(from, to, { verb, data });
+    this.relMap.set(dotRel.id, dotRel);
     from.out.push(dotRel);
     to.in.push(dotRel);
 
     return dotRel;
   }
 
-  getRel<R = DR>(id: DotRel<R>["id"]): DotRel<R> | undefined {
-    return this.rels.get(id);
+  getRel<R = DR>(id: Rel<R>["id"]): Rel<R> | undefined {
+    return this.relMap.get(id);
   }
 
-  getRels(): DotRel[] {
-    return Array.from(this.rels.values());
+  getRels(): Rel[] {
+    return Array.from(this.relMap.values());
   }
 
-  // DOT TYPE RELS
-  getDotTypeRels(): DotTypeRel[] {
-    return Array.from(this.dotTypeRels.values());
+  // LABEL RELS
+  getLabelRels(): LabelRel[] {
+    return Array.from(this.labelRelMap.values());
   }
 
   // PATTERN
   mergePattern<F = DN, R = DR, T = DN>(
-    fromDotCreate: Dot<F> | DotCreate<F>,
-    dotRelCreate: DotRelCreate<R>,
-    toDotCreate: Dot<T> | DotCreate<T>
+    fromDotCreate: DotCreate<F>,
+    dotRelCreate: RelCreate<R>,
+    toDotCreate: DotCreate<T>
   ) {
-    const fromDot = this.getOrCreateDot<F>(fromDotCreate);
-    const toDot = this.getOrCreateDot<T>(toDotCreate);
+    const fromDot = this.mergeDot<F>(fromDotCreate);
+    const toDot = this.mergeDot<T>(toDotCreate);
 
     const dotRel = this.connectDots(fromDot, toDot, dotRelCreate);
 

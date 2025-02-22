@@ -1,4 +1,8 @@
-import { DotRel } from "./DotRel";
+import { LabelRel } from "./LabelRel";
+import { Rel } from "./Rel";
 
-export type Path = DotRel[];
+export type Path = Rel[];
 export type Paths = Path[];
+
+export type LabelPath = LabelRel[];
+export type LabelPaths = LabelPath[];

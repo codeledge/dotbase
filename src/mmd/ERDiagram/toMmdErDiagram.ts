@@ -1,14 +1,14 @@
-import { DotTypeRel } from "../../types/DotTypeRel";
+import { LabelRel } from "../../types/LabelRel";
 
 export const toMmdErDiagram = (
-  dotTypeRels: DotTypeRel[],
+  labelRels: LabelRel[],
   options: {
     showVerb?: boolean;
   } = {}
 ) => {
   let mmdString = `erDiagram\n`;
 
-  dotTypeRels.forEach((dotTypeRel) => {
+  labelRels.forEach((dotTypeRel) => {
     mmdString += `\t${formatERName(dotTypeRel.from.name)} ${
       ERArrows.zeroOrOneLeft
     }--${ERArrows.zeroOrOneRight} ${formatERName(dotTypeRel.to.name)} : ${

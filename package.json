@@ -9,6 +9,9 @@
   "files": [
     "dist/**"
   ],
+  "bin": {
+    "dotbase": "ts-node ./bin/cli.ts"
+  },
   "scripts": {
     "up": "pnpm up -L",
     "build": "tsup --treeshake",
@@ -41,8 +44,10 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@types/relaxed-json": "^1.0.4",
     "decimal.js": "^10.4.3",
-    "deverything": "^1.13.0"
+    "deverything": "^1.13.0",
+    "relaxed-json": "^1.0.3"
   },
   "packageManager": "pnpm@9.15.1+sha512.1acb565e6193efbebda772702950469150cf12bcc764262e7587e71d19dc98a423dff9536e57ea44c49bdf790ff694e83c27be5faa23d67e0c033b583be4bfcf"
 }

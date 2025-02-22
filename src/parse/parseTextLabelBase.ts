@@ -1,10 +1,10 @@
 import { DotBase } from "../DotBase";
 import { countLeadingTabs } from "./countLeadingTabs";
-import { DotType } from "../types/DotType";
+import { Label } from "../types/Label";
 import { Verb } from "../const/Verb";
 import { parseLine } from "./parseLine";
 
-export const parsePlainTextDotTypes = (fileContent: string) => {
+export const parseTextLabelBase = (fileContent: string) => {
   const lines = fileContent.split("\n");
 
   let settings: {
@@ -12,7 +12,7 @@ export const parsePlainTextDotTypes = (fileContent: string) => {
   } = {};
 
   const db = new DotBase();
-  let levelParent: Record<number, DotType> = {};
+  let levelParent: Record<number, Label> = {};
   for (const line of lines) {
     if (!line.trim()) continue;
     if (line.startsWith("{") && line.endsWith("}")) {
@@ -21,12 +21,13 @@ export const parsePlainTextDotTypes = (fileContent: string) => {
     }
 
     const { name, verb } = parseLine(line);
+    if (!name) continue; // Labels cannot have empty names
     const level = countLeadingTabs(line);
-    const dotType = db.getOrCreateDotType(name);
+    const dotType = db.mergeLabel(name);
     if (level > 0) {
       const parent = levelParent[level - 1];
       if (parent) {
-        db.connectDotTypes(parent, dotType, {
+        db.connectLabels(parent, dotType, {
           verb: verb || settings.defaultVerb,
         });
       }

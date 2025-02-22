@@ -14,7 +14,7 @@ export const parsePlainTextDotBase = (fileContent: string) => {
     const level = countLeadingTabs(line);
     const dot = db.mergeDot({
       id: name,
-      typeNames: labels,
+      labels: labels,
     });
     if (level > 0) {
       const parent = levelParent[level - 1];

@@ -1,6 +1,6 @@
 import { last } from "deverything";
 import { Dot } from "../types/Dot";
-import { DotRel } from "../types/DotRel";
+import { Rel } from "../types/Rel";
 
 export enum IteratorResult {
   CONTINUE,
@@ -9,19 +9,21 @@ export enum IteratorResult {
 
 export const walk = (
   fromDots: Dot[],
-  iterator?: (currentDot: Dot, currentPath: DotRel[]) => IteratorResult | void,
+  iterator?: (currentDot: Dot, currentPath: Rel[]) => IteratorResult | void,
   options?: {
-    maxDepth?: number;
+    debug?: boolean;
     direction?: "out" | "in";
+    maxDepth?: number;
+    minDepth?: number; // TODO: as a shortcut where iterator is not called
   }
 ) => {
   let isWalkingStopped = false;
   let isCyclic = false;
-  let deepestPath: DotRel[] = [];
+  let deepestPath: Rel[] = [];
   const visitedDots = new Set<Dot["id"]>();
-  const visitedRels = new Set<DotRel["id"]>();
+  const visitedRels = new Set<Rel["id"]>();
 
-  const walkRecursive = (currentNode: Dot, currentPath: DotRel[]) => {
+  const walkRecursive = (currentNode: Dot, currentPath: Rel[]) => {
     // console.log("isWalkingStopped", isWalkingStopped);
     if (isWalkingStopped) return;
 
@@ -46,15 +48,17 @@ export const walk = (
       deepestPath = currentPath;
     }
 
-    const result = iterator?.(currentNode, currentPath);
+    if (!options?.minDepth || currentPath.length >= options.minDepth) {
+      const iteratorResult = iterator?.(currentNode, currentPath);
 
-    if (result === IteratorResult.STOP) {
-      isWalkingStopped = true;
-      return;
-    }
+      if (iteratorResult === IteratorResult.STOP) {
+        isWalkingStopped = true;
+        return;
+      }
 
-    if (result === IteratorResult.CONTINUE) {
-      return;
+      if (iteratorResult === IteratorResult.CONTINUE) {
+        return;
+      }
     }
 
     // BFS

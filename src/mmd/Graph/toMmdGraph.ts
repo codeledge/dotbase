@@ -1,6 +1,6 @@
 import { walk } from "../../lib/walk";
 import { Dot } from "../../types/Dot";
-import { DotRel } from "../../types/DotRel";
+import { Rel } from "../../types/Rel";
 import { getMmdId } from "../getMmdId";
 
 // https://mermaid.js.org/syntax/flowchart.html
@@ -58,12 +58,12 @@ const formatBlock = (
   options: { labelsAs?: Record<string, Shape> } = {}
 ) => {
   return `${getMmdId(dot.id)}@${JSON.stringify({
-    shape: options.labelsAs?.[dot.types[0]?.name] || "rect",
+    shape: options.labelsAs?.[dot.labels[0]?.name] || "rect",
     label: dot.id,
   })}`;
 };
 
-const formatVerb = (rel: DotRel, options: { showVerb?: boolean } = {}) => {
+const formatVerb = (rel: Rel, options: { showVerb?: boolean } = {}) => {
   let relString = `${GraphArrows.solidWithTip}`;
   if (options.showVerb && rel.verb) relString += `|"\`${rel.verb}\`"|`;
 

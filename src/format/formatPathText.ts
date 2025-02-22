@@ -1,11 +1,11 @@
-import { DotRel } from "../types/DotRel";
+import { Rel } from "../types/Rel";
 import { formatRelText, RelTextOptions } from "./formatRelText";
 import { DotTextOptions } from "./formatDotText";
 
 export type PathTextOptions = RelTextOptions & DotTextOptions;
 
 export const formatPathText = (
-  path: DotRel[],
+  path: Rel[],
   options?: PathTextOptions
 ): string => {
   return path
@@ -16,7 +16,7 @@ export const formatPathText = (
 };
 
 export const formatPathsText = (
-  paths: DotRel[][],
+  paths: Rel[][],
   options?: PathTextOptions
 ): string => {
   return paths.map((path) => formatPathText(path, options)).join("\n");

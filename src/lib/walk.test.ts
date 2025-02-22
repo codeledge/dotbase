@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 import { parsePlainTextDotBase } from "../parse/parsePlainTextDotBase";
 import { walk } from "./walk";
-import { formatPath } from "../format/formatPath";
+import { formatPathText } from "../format/formatPathText";
 
 describe("walk", () => {
   test("isCyclic: false", async () => {
@@ -44,16 +44,7 @@ A[1]
 
     const result = walk(dots);
 
-    console.log(
-      formatPath(result.deepestPath, {
-        from: {
-          id: true,
-        },
-        to: {
-          id: true,
-        },
-      })
-    );
+    console.log(formatPathText(result.deepestPath));
 
     expect(result.deepestPath.length).toBe(2);
   });

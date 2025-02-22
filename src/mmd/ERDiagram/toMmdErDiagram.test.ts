@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { parsePlainTextDotTypes } from "../../parse/parsePlainTextDotTypes";
+import { parseTextLabelBase } from "../../parse/parseTextLabelBase";
 import { toMmdErDiagram } from "./toMmdErDiagram";
 import { toMmdHtml } from "../toMmdHtml";
 
@@ -13,8 +13,8 @@ User
 `;
 
   test("toMmdErDiagram", async () => {
-    const db = parsePlainTextDotTypes(file);
-    const mmd = toMmdErDiagram(db.getDotTypeRels(), { showVerb: true });
+    const db = parseTextLabelBase(file);
+    const mmd = toMmdErDiagram(db.getLabelRels(), { showVerb: true });
     toMmdHtml(mmd, { fileName: "er-diagram" });
 
     expect(mmd.includes("erDiagram")).toBe(true);

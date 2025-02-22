@@ -1,6 +1,6 @@
 import { walk } from "../../lib/walk";
 import { Dot } from "../../types/Dot";
-import { DotRel } from "../../types/DotRel";
+import { Rel } from "../../types/Rel";
 import { getMmdId } from "../getMmdId";
 
 // https://mermaid.js.org/syntax/sequenceDiagram.html
@@ -29,7 +29,7 @@ export const toMmdSequenceDiagram = (
   return mmdString;
 };
 
-const formatRel = (rel: DotRel) => {
+const formatRel = (rel: Rel) => {
   return `${getMmdId(rel.from.id)}${SequenceArrows.solidWithTip}${getMmdId(
     rel.to.id
   )}:"${rel.verb}"`;

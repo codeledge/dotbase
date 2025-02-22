@@ -1,15 +1,25 @@
 import { isArray, isFunction } from "deverything";
 import { Dot, isDot } from "../types/Dot";
-import { DotRel } from "../types/DotRel";
+import { Rel } from "../types/Rel";
 import { walk, IteratorResult } from "./walk";
 
 export const getPaths = (
   startMatcher: Dot | Dot[],
-  pathFilter?: (rel: DotRel[]) => boolean,
+  pathFilter?: (rel: Rel[]) => boolean,
   endMatcher?: Dot | Dot[] | ((d: Dot) => boolean),
-  { maxDepth, direction }: { maxDepth?: number; direction?: "out" | "in" } = {}
+  {
+    debug,
+    direction,
+    maxDepth,
+    minDepth,
+  }: {
+    debug?: boolean;
+    direction?: "out" | "in";
+    maxDepth?: number;
+    minDepth?: number;
+  } = {}
 ) => {
-  let paths: DotRel[][] = [];
+  let paths: Rel[][] = [];
 
   if (!startMatcher) return paths; // TODO: return all paths
 
@@ -38,7 +48,7 @@ export const getPaths = (
         return IteratorResult.CONTINUE;
       }
     },
-    { maxDepth, direction }
+    { minDepth, maxDepth, direction, debug }
   );
 
   return paths;

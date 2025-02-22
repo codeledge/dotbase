@@ -1,17 +1,8 @@
-import { DotPreview } from "../format/format";
 import { formatDotText } from "../format/formatDotText";
 import { Dot } from "../types/Dot";
 
-export type Options = {
-  nodePreview?: DotPreview;
-};
-
-export const formatDotSummaryHtml = (
-  entity: Dot,
-  _options: Options,
-  _depth: number
-) => {
+export const formatDotSummaryHtml = (entity: Dot) => {
   return `<div style="display:inline-block">${formatDotText(entity, {
-    showTypes: true,
+    hideLabels: false,
   })}</div><br>`;
 };

@@ -7,21 +7,21 @@ describe("mergeDot", () => {
     const a = db.createDot({
       id: "a",
       data: { a: 1 },
-      typeNames: ["test"],
+      labels: ["test"],
     });
     const b = db.mergeDot({
       id: "a",
       data: { a: 2, b: 2 },
-      typeNames: ["test2", "test"],
+      labels: ["test2", "test"],
     });
 
-    const merged = db.getDot({ id: "a" });
+    const merged = db.getDot("a");
 
     expect(merged.data).toStrictEqual({
       a: 2,
       b: 2,
     });
 
-    expect(merged.types.length).toBe(2);
+    expect(merged.labels.length).toBe(2);
   });
 });

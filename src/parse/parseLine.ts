@@ -1,4 +1,5 @@
 import { PlainObject } from "deverything";
+import { parse } from "relaxed-json";
 
 export const parseLine = (
   input: string
@@ -104,22 +105,15 @@ const extractProps = (
 
   if (match) {
     const jsonStr = match[1];
-    // Note: JSON.parse expects double-quoted strings for values. If your string values use single quotes,
-    // you might need an additional replacement step.
-    const normalized = jsonStr.replace(/'([^']*)'/g, '"$1"');
-    const quoted = normalized.replace(
-      /([{,]\s*)([A-Za-z_$][A-Za-z0-9_$]*)\s*:/g,
-      '$1"$2":'
-    );
 
     try {
-      const obj = JSON.parse(quoted);
+      const obj = parse(jsonStr);
       return {
         rest: input.replace(regex, "").trim(),
         props: obj,
       };
     } catch (e) {
-      console.error("JSON parse error:", e);
+      console.error("RJSON parse error:", e);
       return {
         rest: input,
         props: undefined,

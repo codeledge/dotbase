@@ -1,18 +1,8 @@
-import { DotRelPreview, DotPreview } from "../lib/format";
-import { DotRel } from "../types/DotRel";
-import { formatDotSummaryHtml } from "./formatDotSummaryHtml";
+import { formatRelText } from "../format/formatRelText";
+import { Rel } from "../types/Rel";
 
-export type Options = {
-  relPreview?: DotRelPreview;
-  nodePreview?: DotPreview;
-};
-
-export const formatDotRelSummaryHtml = (
-  entity: DotRel,
-  options: Options,
-  _depth: number
-) => {
-  return `<div style="display:inline-block">${`-{${
-    options.relPreview?.(entity) || ""
-  }}-> ${formatDotSummaryHtml(entity.to, options, _depth)}`}</div><br>`;
+export const formatDotRelSummaryHtml = (rel: Rel) => {
+  return `<div style="display:inline-block">${formatRelText(rel, {
+    hideFrom: true,
+  })}</div><br>`;
 };

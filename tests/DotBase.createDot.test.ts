@@ -11,10 +11,10 @@ describe("createDot", () => {
     db.createDot({ id: "z" });
     expect(() => db.createDot({ id: "z" })).toThrow();
     const c = db.createDot({
-      typeNames: ["test"],
+      labels: ["test"],
     });
     const d = db.createDot({
-      typeNames: ["test2", "test"],
+      labels: ["test2", "test"],
     });
     expect(c.id).not.toBe(d.id);
     expect(c.types.length).toBe(1);

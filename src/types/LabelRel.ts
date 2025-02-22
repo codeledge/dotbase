@@ -1,13 +1,13 @@
 import { getId } from "../_internals/getId";
-import { DotType } from "./DotType";
+import { Label } from "./Label";
 
-export class DotTypeRel {
+export class LabelRel {
   id: number | string;
   verb: string | undefined;
-  from: DotType;
-  to: DotType;
+  from: Label;
+  to: Label;
 
-  constructor(from: DotType, to: DotType, options: { verb?: string } = {}) {
+  constructor(from: Label, to: Label, options: { verb?: string } = {}) {
     this.id = getId();
     this.from = from;
     this.to = to;

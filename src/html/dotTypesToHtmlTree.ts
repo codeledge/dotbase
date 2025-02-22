@@ -1,10 +1,10 @@
 import { formatDotTypeHtml } from "./formatDotTypeHtml";
 import { DotTypePreview, DotTypeRelPreview } from "../format/format";
-import { DotType } from "../types/DotType";
+import { Label } from "../types/Label";
 import fs from "fs";
 
 export const dotTypesToHtmlTree = (
-  roots: DotType[],
+  roots: Label[],
   {
     location = "./output/dot-types-tree.html",
     dotTypeRelPreview,

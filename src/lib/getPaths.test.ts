@@ -15,9 +15,9 @@ A[1]
 `);
 
     const result = getPaths(
-      db.getDot({ id: "A" }),
+      db.getDot("A"),
       undefined,
-      db.findDots({ type: "4" })
+      db.findDots({ label: "4" })
     );
 
     expect(result.length).toBe(3);

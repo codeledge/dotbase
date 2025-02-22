@@ -1,7 +1,7 @@
 import { Dot } from "../types/Dot";
 
 export type DotTextOptions = {
-  hideTypes?: boolean;
+  hideLabels?: boolean;
 };
 
 export const formatDotText = (
@@ -9,8 +9,8 @@ export const formatDotText = (
   options: DotTextOptions = {}
 ): string => {
   let string = `${dot.id}`;
-  if (!options.hideTypes) {
-    string += ` ${dot.types.map((t) => `[${t.name}]`).join("")}`;
+  if (!options.hideLabels) {
+    string += ` ${dot.labels.map(({ name }) => `[${name}]`).join("")}`;
   }
   return string;
 };

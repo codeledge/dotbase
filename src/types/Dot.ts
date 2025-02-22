@@ -1,29 +1,51 @@
 import { getId } from "../_internals/getId";
-import { DotRel } from "./DotRel";
-import { DotType } from "./DotType";
+import { Rel } from "./Rel";
+import { Label } from "./Label";
 
 export type DotCreate<Data> = {
   id?: Dot["id"];
   data?: Data;
-  typeNames?: string[];
+  labels?: string[]; // done from input
 };
 
 export type DotUpdate<Data> = {
   data?: Data;
-  typeNames?: string[];
+  labels?: string[]; // done from input
+};
+
+export type DotClassCreate<Data> = {
+  id?: Dot["id"];
+  data?: Data;
+  labels?: Label[];
 };
 
 export class Dot<Data = any> {
   id: number | string;
+  x?: number;
+  y?: number;
+  // inConnectors: Record<
+  //   string,
+  //   {
+  //     x: number;
+  //     y: number;
+  //   }
+  // > = {};
+  // outConnectors: Record<
+  //   string,
+  //   {
+  //     x: number;
+  //     y: number;
+  //   }
+  // > = {};
   data: Data | undefined;
-  types: DotType[] = [];
-  out: DotRel[] = [];
-  in: DotRel[] = [];
+  labels: Label[] = [];
+  out: Rel[] = [];
+  in: Rel[] = [];
 
-  constructor({ id, data, types = [] }: Partial<Dot<Data>> = {}) {
+  constructor(id?: Dot["id"], Labels?: Label[], data?: Data) {
     this.id = id || getId();
     this.data = data;
-    this.types = types;
+    this.labels = Labels || [];
   }
 }
 
